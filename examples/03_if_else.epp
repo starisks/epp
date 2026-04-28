@@ -1,0 +1,9 @@
+set x to 12
+
+if x is greater than 10 then
+    say "big"
+else if x is equal to 10 then
+    say "ten"
+else
+    say "small"
+end

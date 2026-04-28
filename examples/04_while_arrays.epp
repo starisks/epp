@@ -1,0 +1,7 @@
+set numbers to [1, 2, 3, 5, 8]
+set i to 0
+
+while i is less than 5 do
+    say "numbers at " + i + " = " + (numbers at i)
+    set i to i + 1
+end

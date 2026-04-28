@@ -1,0 +1,4 @@
+set x to 10
+set y to 5
+say "x + y = " + (x + y)
+say "x * (y + 2) = " + (x * (y + 2))
