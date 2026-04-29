@@ -33,6 +33,11 @@ Directly from .exe
 ./epp
 ```
 
+.exe File Run
+```bash
+./epp examples/01_hello.epp
+```
+
 
 ## Language design
 
