@@ -28,6 +28,12 @@ Run REPL:
 build/epp
 ```
 
+Directly from .exe
+```bash
+./epp
+```
+
+
 ## Language design
 
 ### Core statements
