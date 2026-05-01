@@ -23,7 +23,7 @@ E++ is a beginner-friendly interpreted language with English-like syntax and a c
 ### Platform Notes
 
 - Linux / MinGW64: Fully supported
-- Windows: May require additional configuration
+- Windows: May require additional configuration to build from /src. Use prebuilt `.exe` or Java interpreter 
 - macOS: Not yet supported
 
 
