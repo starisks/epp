@@ -11,7 +11,7 @@ E++ is a beginner-friendly interpreted language with English-like syntax and a c
 
 ### Caution
 
-The /src may be not updated to work on Windows.
+The `/src` may be not updated to work on Windows.
 If you try to build from `/src` using CMake. It could not work on Windows although from Linux or MinGW64 will work
 
 Using CMake:
