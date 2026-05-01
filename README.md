@@ -56,6 +56,8 @@ Directly from .exe
 ./epp examples/01_hello.epp
 ```
 
+## Downloads
+Download the latest version from the Releases page
 
 ## Language design
 
