@@ -1,5 +1,16 @@
 # E++ Programming Language (".epp")
 
+## Why E++?
+
+E++ is designed to make programming more intuitive and readable by using an English-like syntax.
+
+It is built for:
+- Beginners learning programming concepts
+- Understanding how interpreters and languages work
+- Writing simple, readable code with minimal syntax overhead
+
+## Overview
+
 E++ is a beginner-friendly interpreted language with English-like syntax and a clean interpreter architecture:
 
 - **Lexer**: `src/lexer.*`
@@ -9,10 +20,12 @@ E++ is a beginner-friendly interpreted language with English-like syntax and a c
 
 ## Build
 
-### Platform notes
-Linux or MINGW64 : Fully supoorted to build `/src` from CMAKE
-Windows : May need additional configuration
-MacOS : Has not made a supported version
+### Platform Notes
+
+- Linux / MinGW64: Fully supported
+- Windows: May require additional configuration
+- macOS: Not yet supported
+
 
 Using CMake:
 
