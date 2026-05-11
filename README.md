@@ -79,6 +79,15 @@ build/epp
   - Call:
     - `name expr and expr and expr`
 
+- **Modules** (v0.4.0+)
+  - Import:
+    - `import std.math` - import module
+    - `import std.math as m` - import with alias
+    - `from std.math import add, subtract` - import specific symbols
+    - `from std.math import *` - import all symbols
+  - Export:
+    - `export { add, subtract }` - export symbols from module
+
 ### Expressions
 
 - **Literals**: numbers (`10`, `3.14`), strings (`"hi"`), booleans (`true`, `false`)
@@ -86,6 +95,7 @@ build/epp
 - **Arrays**: `[1, 2, 3]`
 - **Indexing**: `array at index`
 - **Function calls**: `add 5 and 10`
+- **Module access**: `math.add 5 and 10` or `m.add 5 and 10` (with alias)
 - **String concatenation**: `say "hello " + name`
 
 ### Conditions (English comparisons)
@@ -114,6 +124,8 @@ statement      := set_stmt
                | try_stmt
                | func_stmt
                | return_stmt
+               | import_stmt
+               | export_stmt
                | expr ;
 
 set_stmt       := "set" IDENT "to" expr ;
@@ -132,6 +144,14 @@ try_stmt       := "try" NEWLINE block "catch" NEWLINE block "end" ;
 func_stmt      := "function" IDENT { IDENT [ "and" IDENT ] } NEWLINE block "end" ;
 return_stmt    := "return" [ expr ] ;
 
+import_stmt    := "import" module_path [ "as" IDENT ]
+               | "from" module_path "import" ( "*" | symbol_list ) ;
+
+module_path    := IDENT { "." IDENT } ;
+symbol_list    := IDENT { "," IDENT } ;
+
+export_stmt    := "export" ( "{" symbol_list "}" | symbol_list ) ;
+
 block          := { statement NEWLINE } ;
 
 cond           := expr [ "is" [ "not" ] ( "greater" ["than"]
@@ -141,12 +161,40 @@ cond           := expr [ "is" [ "not" ] ( "greater" ["than"]
 expr           := term { ("+"|"-") term } ;
 term           := unary { ("*"|"/") unary } ;
 unary          := ["-"] postfix ;
-postfix        := primary { "at" expr } ;
+postfix        := primary { ( "at" expr | "." IDENT [ expr { "and" expr } ] ) } ;
 primary        := NUMBER | STRING | "true" | "false"
                | "[" [ expr { "," expr } ] "]"
                | "(" expr ")"
                | IDENT [ expr { "and" expr } ] ;
 ```
+
+## Package System (v0.4.0+)
+
+E++ includes a local package manager for installing standard library modules:
+
+```bash
+# Install packages
+epp install std.math
+epp install std.io
+epp install std.string
+
+# List installed packages
+epp list
+
+# Remove packages
+epp remove std.math
+```
+
+Packages are stored in `~/.epp/packages/` with a `manifest.json` and source files.
+
+### Module Resolution
+
+Modules are resolved in this order:
+1. Project-local modules
+2. Installed packages (`~/.epp/packages/`)
+3. Built-in stdlib (fallback)
+
+Modules are parsed once per runtime session and cached for subsequent imports.
 
 ## Error handling
 

@@ -188,6 +188,7 @@ class ModuleCache {
 public:
     ModulePtr get(const std::string& modulePath) const;
     void set(const std::string& modulePath, ModulePtr module);
+    void remove(const std::string& modulePath);
     bool isLoading(const std::string& modulePath) const;
     void clear();
 

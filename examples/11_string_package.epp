@@ -1,0 +1,21 @@
+# Example: Using the std.string package
+
+import std.string as str
+
+# Test string functions
+set s to "hello world"
+say s
+
+# Test length
+set len to str.length s
+say len
+
+# Test is_empty
+set empty to str.is_empty s
+say empty
+
+set empty_str to ""
+set is_empty_result to str.is_empty empty_str
+say is_empty_result
+
+say "String package demo complete!"

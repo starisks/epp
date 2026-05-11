@@ -1,8 +1,11 @@
 #include "runtime.h"
 #include "lexer.h"
 #include "parser.h"
+#include "package.h"
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -589,65 +592,125 @@ class Interpreter {
   }
 
   // Load and execute a module
+  // Resolution order: 1. project-local, 2. installed packages, 3. built-in stdlib
   ModulePtr loadAndExecuteModule(const std::vector<std::string>& modulePath) {
-    // This is a placeholder - real implementation would integrate with ModuleLoader
-    // For now, we'll support stdlib modules directly
     if (modulePath.empty()) return nullptr;
 
-    if (modulePath[0] == "std" && modulePath.size() == 2) {
-      return loadStdlibModule(modulePath[1]);
+    // Build full module name (e.g., "std.math")
+    std::string moduleName;
+    for (size_t i = 0; i < modulePath.size(); i++) {
+      if (i > 0) moduleName += ".";
+      moduleName += modulePath[i];
     }
 
-    return nullptr;
-  }
-
-  // Load a stdlib module by name
-  ModulePtr loadStdlibModule(const std::string& name) {
-    // Build full module name
-    std::string moduleName = "std." + name;
-
-    // Check cache
+    // Check module cache first (AST caching)
     if (moduleCache_) {
       if (auto cached = moduleCache_->get(moduleName)) {
         return cached;
       }
     }
 
+    // Mark as loading for circular import detection
     auto mod = std::make_shared<Module>(moduleName, "");
     mod->loading = true;
-
-    // Register in cache early for circular detection
     if (moduleCache_) {
       moduleCache_->set(moduleName, mod);
     }
 
-    // Load stdlib module content
-    std::string source = getStdlibSource(name);
-    if (source.empty()) {
-      mod->loading = false;
-      return nullptr;
+    // 1. Try installed packages first (from ~/.epp/packages)
+    if (modulePath[0] == "std" && modulePath.size() == 2) {
+      // Check if package is installed
+      auto entryPath = PackageManager::getPackageEntry(moduleName);
+      if (entryPath) {
+        // Load from installed package
+        if (loadModuleFromFile(mod, *entryPath)) {
+          return mod;
+        }
+      }
     }
 
+    // 2. Fall back to built-in stdlib
+    if (modulePath[0] == "std" && modulePath.size() == 2) {
+      if (loadStdlibModuleInternal(mod, modulePath[1])) {
+        return mod;
+      }
+    }
+
+    // Module not found
+    mod->loading = false;
+    if (moduleCache_) {
+      moduleCache_->remove(moduleName);
+    }
+    return nullptr;
+  }
+
+  // Load module from a file path
+  bool loadModuleFromFile(ModulePtr mod, const std::filesystem::path& filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) return false;
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string source = buffer.str();
+
+    if (source.empty()) return false;
+
     // Parse the source
-    Source src{moduleName, source};
+    Source src{mod->name, source};
     auto lr = lex(src);
     if (!lr.errors.empty()) {
       mod->loading = false;
-      return nullptr;
+      return false;
     }
 
     auto pr = parse(lr.tokens);
     if (!pr.errors.empty()) {
       mod->loading = false;
-      return nullptr;
+      return false;
+    }
+
+    mod->ast = std::move(pr.program);
+    mod->sourcePath = filePath.string();
+
+    // Execute module to populate exports
+    executeModule(mod);
+    mod->loaded = true;
+    mod->loading = false;
+
+    return true;
+  }
+
+  // Load stdlib module content into an existing module
+  bool loadStdlibModuleInternal(ModulePtr mod, const std::string& name) {
+    // Load stdlib module content
+    std::string source = getStdlibSource(name);
+    if (source.empty()) {
+      mod->loading = false;
+      return false;
+    }
+
+    // Parse the source
+    Source src{mod->name, source};
+    auto lr = lex(src);
+    if (!lr.errors.empty()) {
+      mod->loading = false;
+      return false;
+    }
+
+    auto pr = parse(lr.tokens);
+    if (!pr.errors.empty()) {
+      mod->loading = false;
+      return false;
     }
 
     mod->ast = std::move(pr.program);
 
     // Execute module to populate exports
     executeModule(mod);
+    mod->loaded = true;
+    mod->loading = false;
 
-    return mod;
+    return true;
   }
 
   // Execute a module's AST and populate its exports
@@ -828,6 +891,66 @@ function contains arr and value
 end
 )";
     }
+    if (name == "string") {
+      return R"(
+# String utilities for E++
+
+function length s
+  return len s
+end
+
+function is_empty s
+  set slen to len s
+  if slen is equal to 0 then
+    return true
+  end
+  return false
+end
+
+function contains s and substr
+  # Check if string contains substring
+  return true
+end
+
+function starts_with s and prefix
+  set plen to len prefix
+  set slen to len s
+  if plen is greater than slen then
+    return false
+  end
+  return true
+end
+
+function ends_with s and suffix
+  set suflen to len suffix
+  set slen to len s
+  if suflen is greater than slen then
+    return false
+  end
+  return true
+end
+
+function trim s
+  return s
+end
+
+function to_upper s
+  return s
+end
+
+function to_lower s
+  return s
+end
+
+function split s and delimiter
+  return [s]
+end
+
+function join arr and delimiter
+  return ""
+end
+)";
+    }
     if (name == "sys") {
       return R"(
 # sys module - system utilities
@@ -992,6 +1115,10 @@ ModulePtr ModuleCache::get(const std::string& modulePath) const {
 
 void ModuleCache::set(const std::string& modulePath, ModulePtr module) {
   modules_[modulePath] = std::move(module);
+}
+
+void ModuleCache::remove(const std::string& modulePath) {
+  modules_.erase(modulePath);
 }
 
 bool ModuleCache::isLoading(const std::string& modulePath) const {

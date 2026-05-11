@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "runtime.h"
 #include "source.h"
+#include "package.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -193,15 +194,45 @@ int main(int argc, char** argv) {
     return 0;
   } 
 
-  if (arg == "--help") {
+  if (arg == "install" && argc > 2) {
+    std::string pkgName = argv[2];
+    PackageManager::initializePackageDir();
+    bool ok = PackageManager::installPackage(pkgName);
+    return ok ? 0 : 1;
+  }
+
+  if (arg == "remove" && argc > 2) {
+    std::string pkgName = argv[2];
+    bool ok = PackageManager::removePackage(pkgName);
+    return ok ? 0 : 1;
+  }
+
+  if (arg == "list") {
+    PackageManager::initializePackageDir();
+    auto packages = PackageManager::listInstalledPackages();
+    if (packages.empty()) {
+      std::cout << "No packages installed.\n";
+    } else {
+      std::cout << "Installed packages:\n";
+      for (const auto& pkg : packages) {
+        std::cout << "  " << pkg << "\n";
+      }
+    }
+    return 0;
+  }
+
+  if (arg == "--help" || arg == "help") {
     std::cout <<
       "E++ CLI (epp)\n\n"
       "Usage:\n"
-      "  epp                Start REPL\n"
-      "  epp <file>.epp     Run a file\n\n"
+      "  epp                      Start REPL\n"
+      "  epp <file>.epp           Run a file\n"
+      "  epp install <package>    Install a package\n"
+      "  epp remove <package>     Remove a package\n"
+      "  epp list                 List installed packages\n\n"
       "Options:\n"
-      "  --version          Show version and check for updates\n"
-      "  --help             Show this help message\n";
+      "  --version                Show version and check for updates\n"
+      "  --help                   Show this help message\n";
     return 0;
     } 
   }

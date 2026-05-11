@@ -13,6 +13,7 @@ add_executable(epp
   src/parser.cpp
   src/ast.cpp
   src/runtime.cpp
+  src/package.cpp
 )
 
 target_include_directories(epp PRIVATE src)
