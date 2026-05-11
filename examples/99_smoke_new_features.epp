@@ -1,0 +1,24 @@
+set a to [1, [2, 3]]
+set b to [1, [2, 3.0000000001]]
+if a is equal to b then
+  say "eq"
+else
+  say "neq"
+end
+
+set x to 1
+if x is less than 2 and not (x is equal to 0) then
+  say "logic"
+end
+
+set n to 1
+if n is less than 2 is less than 3 then
+  say "chain"
+end
+
+set arr to [1, 2]
+push arr and 3
+say len arr
+say pop arr
+say len arr
+say type arr

@@ -1,0 +1,24 @@
+say "Hello"
+
+set x to 10
+
+say x
+
+if x is greater than 10 then
+    say "x >= 10"
+else
+    say "x <= 10"
+end
+
+function add a and b
+    return a + b
+end
+
+say (add 15 and 15)
+
+try 
+    set x to 10 / 5
+    say x
+catch
+    say "error"
+end

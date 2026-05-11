@@ -1,0 +1,15 @@
+ask "Enter your name" into name
+say "Hello " + name
+
+function add a and b
+    return a + b
+end
+
+say "add 5 and 10 = " + (add 5 and 10)
+
+try
+    set x to 10 / 0
+    say x
+catch
+    say "error occurred"
+end
