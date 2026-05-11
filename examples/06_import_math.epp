@@ -1,0 +1,13 @@
+# Example: Import std.math and use it
+
+import std.math as m
+
+# Use the imported module (E++ syntax: module.func arg1 and arg2)
+set x to m.add 5 and 3
+say x
+
+set y to m.multiply 4 and 7
+say y
+
+set z to m.power 2 and 8
+say z

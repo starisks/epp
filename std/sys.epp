@@ -1,0 +1,14 @@
+# std.sys - System utilities for E++
+
+export { clock, exit }
+
+function clock
+  # Returns current time as seconds since epoch
+  # Placeholder - would integrate with system clock
+  return 0
+end
+
+function exit code
+  # Would exit program with given code
+  # Placeholder
+end

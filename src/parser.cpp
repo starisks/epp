@@ -68,6 +68,9 @@ class Parser {
     if (match(TokenType::Try)) return tryCatchStmt(errors, previous().span);
     if (match(TokenType::Function)) return functionStmt(errors, previous().span);
     if (match(TokenType::Return)) return returnStmt(errors, previous().span);
+    if (match(TokenType::Import)) return importStmt(errors, previous().span);
+    if (match(TokenType::From)) return fromImportStmt(errors, previous().span);
+    if (match(TokenType::Export)) return exportStmt(errors, previous().span);
 
     // expression statement (useful for calling functions without say)
     auto expr = expression(errors);
@@ -202,6 +205,101 @@ class Parser {
     return std::make_unique<ReturnStmt>(std::move(v), sp);
   }
 
+  // import module
+  // import module as alias
+  // from module import symbol
+  // from module import symbol1, symbol2
+  // from module import *
+  StmtPtr importStmt(std::vector<ParseError>& errors, Span sp) {
+    // Check if next token is an identifier
+    if (!check(TokenType::Identifier)) {
+      errors.push_back(ParseError{"Expected module name after 'import'", peek().span});
+      return nullptr;
+    }
+
+    // Parse the module path (may contain dots)
+    std::vector<std::string> path = parseModulePath();
+    if (path.empty()) {
+      errors.push_back(ParseError{"Expected module path", peek().span});
+      return nullptr;
+    }
+
+    // Check if this is 'from x import' syntax
+    // The path we parsed was actually: from [path] import
+    // So we need to check if the original statement started with 'from'
+    // Since we're in importStmt, we know it started with 'import', not 'from'
+    // Regular import: import x or import x.y as alias
+    std::string alias;
+    if (match(TokenType::As)) {
+      Token aliasTok = expect(TokenType::Identifier, errors, "Expected alias name after 'as'");
+      alias = aliasTok.lexeme;
+    }
+
+    return std::make_unique<ImportStmt>(std::move(path), std::move(alias), sp);
+  }
+
+  // from module import symbol1, symbol2
+  // from module import *
+  StmtPtr fromImportStmt(std::vector<ParseError>& errors, Span sp) {
+    // Parse the module path
+    std::vector<std::string> path = parseModulePath();
+    if (path.empty()) {
+      errors.push_back(ParseError{"Expected module path after 'from'", peek().span});
+      return nullptr;
+    }
+
+    expect(TokenType::Import, errors, "Expected 'import' after module path in 'from' statement");
+
+    // Check for 'import *'
+    if (match(TokenType::Star)) {
+      return std::make_unique<ImportStmt>(std::move(path), std::vector<std::string>{}, true, sp);
+    }
+
+    // Parse symbol list
+    std::vector<std::string> symbols;
+    if (check(TokenType::Identifier)) {
+      symbols.push_back(advance().lexeme);
+      while (match(TokenType::Comma)) {
+        Token symTok = expect(TokenType::Identifier, errors, "Expected symbol name after comma");
+        symbols.push_back(symTok.lexeme);
+      }
+    }
+
+    return std::make_unique<ImportStmt>(std::move(path), std::move(symbols), false, sp);
+  }
+
+  std::vector<std::string> parseModulePath() {
+    std::vector<std::string> path;
+    while (check(TokenType::Identifier)) {
+      path.push_back(advance().lexeme);
+      if (!match(TokenType::Dot)) break;
+    }
+    return path;
+  }
+
+  // export { symbol1, symbol2, ... }
+  StmtPtr exportStmt(std::vector<ParseError>& errors, Span sp) {
+    std::vector<std::string> symbols;
+
+    if (match(TokenType::LBracket)) {
+      // export { symbol1, symbol2 }
+      if (!check(TokenType::RBracket)) {
+        do {
+          Token symTok = expect(TokenType::Identifier, errors, "Expected symbol name in export list");
+          symbols.push_back(symTok.lexeme);
+        } while (match(TokenType::Comma));
+      }
+      expect(TokenType::RBracket, errors, "Expected '}' to close export list");
+    } else if (check(TokenType::Identifier)) {
+      // Single symbol export: export symbol
+      symbols.push_back(advance().lexeme);
+    } else {
+      errors.push_back(ParseError{"Expected export list or symbol name after 'export'", peek().span});
+    }
+
+    return std::make_unique<ExportStmt>(std::move(symbols), sp);
+  }
+
   // ---- expressions ----
 
   static bool startsExpr(TokenType t) {
@@ -219,6 +317,43 @@ class Parser {
       default:
         return false;
     }
+  }
+
+  // For function call argument detection - excludes binary operators
+  // to prevent 'a - b' from being parsed as function call 'a' with arg '-b'
+  // But allows negative number literals: func -42
+  static bool startsFunctionArg(TokenType t) {
+    switch (t) {
+      case TokenType::Number:
+      case TokenType::String:
+      case TokenType::Identifier:
+      case TokenType::LParen:
+      case TokenType::LBracket:
+      case TokenType::True:
+      case TokenType::False:
+      case TokenType::Not:
+        return true;
+      case TokenType::Minus:
+        // Check if next token is a number (negative number literal)
+        // This is checked by the caller using peek(1)
+        return false;  // Will be handled specially by caller
+      default:
+        return false;
+    }
+  }
+
+  // Check if current token position starts a valid function argument
+  // Handles special cases like negative number literals
+  bool startsFunctionArgAt() const {
+    TokenType t = peek().type;
+    if (t == TokenType::Minus) {
+      // Minus starts a function arg only if followed by a number (negative literal)
+      if (i_ + 1 < tokens_.size() && tokens_[i_ + 1].type == TokenType::Number) {
+        return true;
+      }
+      return false;  // Binary subtraction
+    }
+    return startsFunctionArg(t);
   }
 
   ExprPtr conditionExpr(std::vector<ParseError>& errors) { return logicOr(errors); }
@@ -364,6 +499,13 @@ class Parser {
         for (const auto& a : ce.args) args.push_back(cloneExprForChain(*a));
         return std::make_unique<CallExpr>(ce.callee, std::move(args), e.span);
       }
+      case ExprKind::MethodCall: {
+        const auto& mc = static_cast<const MethodCallExpr&>(e);
+        std::vector<ExprPtr> args;
+        args.reserve(mc.args.size());
+        for (const auto& a : mc.args) args.push_back(cloneExprForChain(*a));
+        return std::make_unique<MethodCallExpr>(cloneExprForChain(*mc.receiver), mc.method, std::move(args), e.span);
+      }
       case ExprKind::Index: {
         const auto& ie = static_cast<const IndexExpr&>(e);
         return std::make_unique<IndexExpr>(cloneExprForChain(*ie.target), cloneExprForChain(*ie.index), e.span);
@@ -371,6 +513,10 @@ class Parser {
       case ExprKind::Group: {
         const auto& ge = static_cast<const GroupExpr&>(e);
         return std::make_unique<GroupExpr>(cloneExprForChain(*ge.inner), e.span);
+      }
+      case ExprKind::Dot: {
+        const auto& de = static_cast<const DotExpr&>(e);
+        return std::make_unique<DotExpr>(cloneExprForChain(*de.left), de.right, e.span);
       }
     }
     return nullptr;
@@ -440,11 +586,39 @@ class Parser {
 
   ExprPtr postfix(std::vector<ParseError>& errors) {
     auto expr = primary(errors);
-    while (expr && match(TokenType::At)) {
-      Span sp = previous().span;
-      auto idx = expression(errors);
-      if (!idx) idx = std::make_unique<NumberExpr>(0.0, sp);
-      expr = std::make_unique<IndexExpr>(std::move(expr), std::move(idx), sp);
+
+    // Handle chained dots and method calls
+    while (expr) {
+      if (match(TokenType::At)) {
+        Span sp = previous().span;
+        auto idx = expression(errors);
+        if (!idx) idx = std::make_unique<NumberExpr>(0.0, sp);
+        expr = std::make_unique<IndexExpr>(std::move(expr), std::move(idx), sp);
+      } else if (match(TokenType::Dot)) {
+        // namespace/module access: module.symbol
+        Span sp = previous().span;
+        Token nameTok = expect(TokenType::Identifier, errors, "Expected identifier after '.'");
+
+        // Check for method call: module.func arg1 and arg2
+        // Use startsFunctionArgAt to handle negative numbers: m.func -42
+        if (startsFunctionArgAt()) {
+          Span callSpan = nameTok.span;
+          std::vector<ExprPtr> args;
+          auto first = expression(errors);
+          if (first) args.push_back(std::move(first));
+          while (match(TokenType::And)) {
+            auto a = expression(errors);
+            if (a) args.push_back(std::move(a));
+          }
+          // Create a method call expression
+          expr = std::make_unique<MethodCallExpr>(std::move(expr), nameTok.lexeme, std::move(args), callSpan);
+        } else {
+          // Just a property access: module.symbol
+          expr = std::make_unique<DotExpr>(std::move(expr), nameTok.lexeme, sp);
+        }
+      } else {
+        break;
+      }
     }
     return expr;
   }
@@ -488,7 +662,8 @@ class Parser {
     if (match(TokenType::Identifier)) {
       Token id = previous();
       // call syntax: <name> <expr> (and <expr>)*
-      if (startsExpr(peek().type)) {
+      // Use startsFunctionArgAt to handle negative numbers: func -42
+      if (startsFunctionArgAt()) {
         std::vector<ExprPtr> args;
         auto first = expression(errors);
         if (first) args.push_back(std::move(first));

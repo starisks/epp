@@ -1,0 +1,13 @@
+# Example: From import - import specific symbols
+
+from std.math import add, multiply, power
+
+# Use the imported functions directly (E++ syntax)
+set x to add 2 and 3
+say x
+
+set y to multiply 4 and 5
+say y
+
+set z to power 2 and 10
+say z

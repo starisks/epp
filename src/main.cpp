@@ -9,7 +9,10 @@
 #include <vector>
 #include <curl/curl.h>
 
-#define EPP_VERSION "v0.2.0"
+#ifndef EPP_VERSION
+#define EPP_VERSION "dev"
+#endif
+
 #define API_URL "https://api.github.com/repos/starisks/epp/releases/latest"
 
 namespace epp {

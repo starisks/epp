@@ -1,4 +1,6 @@
 #include "runtime.h"
+#include "lexer.h"
+#include "parser.h"
 
 #include <cmath>
 #include <iostream>
@@ -39,6 +41,7 @@ static bool isString(const Value& v) { return std::holds_alternative<std::string
 static bool isBool(const Value& v) { return std::holds_alternative<bool>(v.data); }
 static bool isArray(const Value& v) { return std::holds_alternative<Value::Array>(v.data); }
 static bool isFunc(const Value& v) { return std::holds_alternative<Value::Func>(v.data); }
+static bool isModuleNs(const Value& v) { return std::holds_alternative<Value::ModuleNs>(v.data); }
 
 static const char* typeName(const Value& v) {
   if (isNull(v)) return "null";
@@ -46,6 +49,7 @@ static const char* typeName(const Value& v) {
   if (isString(v)) return "string";
   if (isBool(v)) return "bool";
   if (isArray(v)) return "array";
+  if (isModuleNs(v)) return "module";
   return "function";
 }
 
@@ -85,6 +89,13 @@ std::string toString(const Value& v) {
     oss << "]";
     return oss.str();
   }
+  if (isModuleNs(v)) {
+    const auto& ns = std::get<Value::ModuleNs>(v.data);
+    if (ns && ns->module) {
+      return "<module " + ns->module->name + ">";
+    }
+    return "<module>";
+  }
   return "<function>";
 }
 
@@ -103,8 +114,13 @@ struct ReturnSignal {
 
 class Interpreter {
  public:
-  Interpreter(std::istream& in, std::ostream& out) : in_(in), out_(out) {
+  Interpreter(std::istream& in, std::ostream& out,
+              std::shared_ptr<ModuleCache> moduleCache = nullptr)
+      : in_(in), out_(out), moduleCache_(std::move(moduleCache)) {
     globals_ = std::make_shared<Env>();
+    if (!moduleCache_) {
+      moduleCache_ = std::make_shared<ModuleCache>();
+    }
   }
 
   ExecResult exec(const std::vector<StmtPtr>& program) {
@@ -122,6 +138,7 @@ class Interpreter {
   std::istream& in_;
   std::ostream& out_;
   EnvPtr globals_;
+  std::shared_ptr<ModuleCache> moduleCache_;
   std::vector<std::pair<std::string, Span>> callStack_;
 
   [[noreturn]] void throwErr(const std::string& msg, Span sp) {
@@ -184,6 +201,20 @@ class Interpreter {
         return arr[static_cast<size_t>(idx)];
       }
       case ExprKind::Call: return evalCall(static_cast<const CallExpr&>(e), env);
+      case ExprKind::MethodCall: return evalMethodCall(static_cast<const MethodCallExpr&>(e), env);
+      case ExprKind::Dot: {
+        const auto& de = static_cast<const DotExpr&>(e);
+        Value left = evalExpr(*de.left, env);
+        if (!isModuleNs(left)) {
+          throwErr("Cannot access property on non-module value", de.span);
+        }
+        const auto& ns = std::get<Value::ModuleNs>(left.data);
+        Value result;
+        if (!ns->get(de.right, result)) {
+          throwErr("Module has no export named '" + de.right + "'", de.span);
+        }
+        return result;
+      }
     }
     throwErr("Unknown expression", e.span);
   }
@@ -347,6 +378,59 @@ class Interpreter {
     return Value::null();
   }
 
+  Value evalMethodCall(const MethodCallExpr& mc, const EnvPtr& env) {
+    // Evaluate the receiver (should be a module namespace)
+    Value receiver = evalExpr(*mc.receiver, env);
+    if (!isModuleNs(receiver)) {
+      throwErr("Cannot call method on non-module value", mc.span);
+    }
+
+    // Get the method from the module
+    const auto& ns = std::get<Value::ModuleNs>(receiver.data);
+    Value methodVal;
+    if (!ns->get(mc.method, methodVal)) {
+      throwErr("Module has no method named '" + mc.method + "'", mc.span);
+    }
+
+    if (!isFunc(methodVal)) {
+      throwErr("'" + mc.method + "' is not a function", mc.span);
+    }
+
+    auto fn = std::get<Value::Func>(methodVal.data);
+    if (!fn) throwErr("Invalid function", mc.span);
+
+    // Evaluate arguments
+    std::vector<Value> argVals;
+    for (const auto& arg : mc.args) {
+      argVals.push_back(evalExpr(*arg, env));
+    }
+
+    if (fn->params.size() != argVals.size()) {
+      throwErr("Function '" + mc.method + "' expects " + std::to_string(fn->params.size()) +
+                   " arguments, got " + std::to_string(argVals.size()),
+               mc.span);
+    }
+
+    // Create call environment with function's closure
+    EnvPtr callEnv = std::make_shared<Env>(fn->closure);
+    for (size_t i = 0; i < fn->params.size(); i++) {
+      callEnv->setLocal(fn->params[i], argVals[i]);
+    }
+
+    callStack_.push_back({mc.method, mc.span});
+    try {
+      for (const auto& st : fn->body) execStmt(*st, callEnv);
+    } catch (const ReturnSignal& rs) {
+      callStack_.pop_back();
+      return rs.value;
+    } catch (...) {
+      callStack_.pop_back();
+      throw;
+    }
+    callStack_.pop_back();
+    return Value::null();
+  }
+
   void execStmt(const Stmt& st, const EnvPtr& env) {
     switch (st.kind) {
       case StmtKind::Set: {
@@ -436,8 +520,333 @@ class Interpreter {
         (void)evalExpr(*es.expr, env);
         return;
       }
+      case StmtKind::Import: {
+        execImport(static_cast<const ImportStmt&>(st), env);
+        return;
+      }
+      case StmtKind::Export: {
+        execExport(static_cast<const ExportStmt&>(st), env);
+        return;
+      }
     }
     throwErr("Unknown statement", st.span);
+  }
+
+  // Import statement execution
+  void execImport(const ImportStmt& is, const EnvPtr& env) {
+    // Build module name
+    std::string moduleName;
+    for (size_t i = 0; i < is.modulePath.size(); ++i) {
+      if (i > 0) moduleName += ".";
+      moduleName += is.modulePath[i];
+    }
+
+    // Check if module is already cached
+    ModulePtr mod = moduleCache_ ? moduleCache_->get(moduleName) : nullptr;
+
+    if (!mod) {
+      // Load and execute the module
+      mod = loadAndExecuteModule(is.modulePath);
+      if (moduleCache_ && mod) {
+        moduleCache_->set(moduleName, mod);
+      }
+    }
+
+    if (!mod || !mod->loaded) {
+      throwErr("Failed to load module: " + moduleName, is.span);
+    }
+
+    // Handle different import styles
+    if (!is.symbols.empty()) {
+      // 'from module import symbol1, symbol2'
+      for (const auto& sym : is.symbols) {
+        Value val;
+        if (!mod->getExport(sym, val)) {
+          throwErr("Module '" + moduleName + "' does not export '" + sym + "'", is.span);
+        }
+        env->setLocal(sym, val);
+      }
+    } else if (is.importAll) {
+      // 'from module import *' - import all exports into current scope
+      for (const auto& [name, val] : mod->exports) {
+        env->setLocal(name, val);
+      }
+    } else {
+      // 'import module' or 'import module as alias'
+      std::string varName = is.alias.empty() ? is.modulePath.back() : is.alias;
+      auto ns = std::make_shared<ModuleNamespace>(mod);
+      env->setLocal(varName, Value::moduleNs(ns));
+    }
+  }
+
+  // Export statement execution
+  void execExport(const ExportStmt& es, const EnvPtr& env) {
+    // Exports are collected from the module's environment
+    // For now, we don't need to do anything special at runtime
+    // The exports are set up when the module is executed
+    (void)es;
+    (void)env;
+  }
+
+  // Load and execute a module
+  ModulePtr loadAndExecuteModule(const std::vector<std::string>& modulePath) {
+    // This is a placeholder - real implementation would integrate with ModuleLoader
+    // For now, we'll support stdlib modules directly
+    if (modulePath.empty()) return nullptr;
+
+    if (modulePath[0] == "std" && modulePath.size() == 2) {
+      return loadStdlibModule(modulePath[1]);
+    }
+
+    return nullptr;
+  }
+
+  // Load a stdlib module by name
+  ModulePtr loadStdlibModule(const std::string& name) {
+    // Build full module name
+    std::string moduleName = "std." + name;
+
+    // Check cache
+    if (moduleCache_) {
+      if (auto cached = moduleCache_->get(moduleName)) {
+        return cached;
+      }
+    }
+
+    auto mod = std::make_shared<Module>(moduleName, "");
+    mod->loading = true;
+
+    // Register in cache early for circular detection
+    if (moduleCache_) {
+      moduleCache_->set(moduleName, mod);
+    }
+
+    // Load stdlib module content
+    std::string source = getStdlibSource(name);
+    if (source.empty()) {
+      mod->loading = false;
+      return nullptr;
+    }
+
+    // Parse the source
+    Source src{moduleName, source};
+    auto lr = lex(src);
+    if (!lr.errors.empty()) {
+      mod->loading = false;
+      return nullptr;
+    }
+
+    auto pr = parse(lr.tokens);
+    if (!pr.errors.empty()) {
+      mod->loading = false;
+      return nullptr;
+    }
+
+    mod->ast = std::move(pr.program);
+
+    // Execute module to populate exports
+    executeModule(mod);
+
+    return mod;
+  }
+
+  // Execute a module's AST and populate its exports
+  void executeModule(ModulePtr mod) {
+    if (!mod || mod->loaded || mod->loading == false) return;
+
+    // Create module environment
+    auto modEnv = std::make_shared<Env>(globals_);
+
+    // Execute all statements
+    for (const auto& st : mod->ast) {
+      // Handle function definitions - they get added to modEnv
+      if (st->kind == StmtKind::Function) {
+        const auto& fs = static_cast<const FunctionStmt&>(*st);
+        auto fn = std::make_shared<FunctionValue>();
+        fn->params = fs.params;
+        fn->closure = modEnv;
+        fn->span = fs.span;
+        fn->body = cloneBlock(fs.body);
+        modEnv->setLocal(fs.name, Value::func(fn));
+      }
+      // Handle export statements
+      else if (st->kind == StmtKind::Export) {
+        const auto& es = static_cast<const ExportStmt&>(*st);
+        for (const auto& sym : es.symbols) {
+          Value val;
+          if (modEnv->get(sym, val)) {
+            mod->exports[sym] = val;
+          }
+        }
+      }
+      // Handle other statements
+      else {
+        execStmt(*st, modEnv);
+      }
+    }
+
+    // Also export any top-level functions that weren't explicitly exported
+    // (if no export statements, export everything)
+    bool hasExplicitExport = false;
+    for (const auto& st : mod->ast) {
+      if (st->kind == StmtKind::Export) {
+        hasExplicitExport = true;
+        break;
+      }
+    }
+
+    if (!hasExplicitExport) {
+      // Export all top-level bindings
+      for (const auto& [name, val] : modEnv->vars) {
+        mod->exports[name] = val;
+      }
+    }
+
+    mod->loaded = true;
+    mod->loading = false;
+  }
+
+  // Get stdlib module source code
+  std::string getStdlibSource(const std::string& name) {
+    if (name == "math") {
+      return R"(
+function add a and b
+  return a + b
+end
+
+function subtract a and b
+  return a - b
+end
+
+function multiply a and b
+  return a * b
+end
+
+function divide a and b
+  return a / b
+end
+
+function power base and exp
+  set result to 1
+  set i to 0
+  while i is less than exp do
+    set result to result * base
+    set i to i + 1
+  end
+  return result
+end
+
+function abs x
+  if x is less than 0 then
+    return -x
+  end
+  return x
+end
+
+function max a and b
+  if a is greater than b then
+    return a
+  end
+  return b
+end
+
+function min a and b
+  if a is less than b then
+    return a
+  end
+  return b
+end
+)";
+    }
+    if (name == "io") {
+      return R"(
+# io module - input/output utilities
+# Note: print and input are handled specially by the runtime
+
+export { print, println, input }
+)";
+    }
+    if (name == "collections") {
+      return R"(
+function map arr and fn
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to fn arr at i
+    push result and val
+    set i to i + 1
+  end
+  return result
+end
+
+function filter arr and fn
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    if fn val then
+      push result and val
+    end
+    set i to i + 1
+  end
+  return result
+end
+
+function reduce arr and fn and init
+  set acc to init
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    set acc to fn acc and val
+    set i to i + 1
+  end
+  return acc
+end
+
+function find arr and fn
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    if fn val then
+      return val
+    end
+    set i to i + 1
+  end
+  return null
+end
+
+function contains arr and value
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    if val is equal to value then
+      return true
+    end
+    set i to i + 1
+  end
+  return false
+end
+)";
+    }
+    if (name == "sys") {
+      return R"(
+# sys module - system utilities
+
+function clock
+  # Returns current time as seconds since epoch
+  # Placeholder - would integrate with system clock
+  return 0
+end
+
+function exit code
+  # Would exit program with given code
+  # Placeholder
+end
+
+export { clock, exit }
+)";
+    }
+    return "";
   }
 
   // ---- cloning (temporary ownership solution) ----
@@ -472,6 +881,13 @@ class Interpreter {
         for (const auto& a : ce.args) args.push_back(cloneExpr(*a));
         return std::make_unique<CallExpr>(ce.callee, std::move(args), e.span);
       }
+      case ExprKind::MethodCall: {
+        const auto& mc = static_cast<const MethodCallExpr&>(e);
+        std::vector<ExprPtr> args;
+        args.reserve(mc.args.size());
+        for (const auto& a : mc.args) args.push_back(cloneExpr(*a));
+        return std::make_unique<MethodCallExpr>(cloneExpr(*mc.receiver), mc.method, std::move(args), e.span);
+      }
       case ExprKind::Index: {
         const auto& ie = static_cast<const IndexExpr&>(e);
         return std::make_unique<IndexExpr>(cloneExpr(*ie.target), cloneExpr(*ie.index), e.span);
@@ -479,6 +895,10 @@ class Interpreter {
       case ExprKind::Group: {
         const auto& ge = static_cast<const GroupExpr&>(e);
         return std::make_unique<GroupExpr>(cloneExpr(*ge.inner), e.span);
+      }
+      case ExprKind::Dot: {
+        const auto& de = static_cast<const DotExpr&>(e);
+        return std::make_unique<DotExpr>(cloneExpr(*de.left), de.right, e.span);
       }
     }
     return nullptr;
@@ -532,6 +952,14 @@ class Interpreter {
         const auto& es = static_cast<const ExprStmt&>(st);
         return std::make_unique<ExprStmt>(cloneExpr(*es.expr), st.span);
       }
+      case StmtKind::Import: {
+        const auto& is = static_cast<const ImportStmt&>(st);
+        return std::make_unique<ImportStmt>(is.modulePath, is.symbols, is.importAll, st.span);
+      }
+      case StmtKind::Export: {
+        const auto& es = static_cast<const ExportStmt&>(st);
+        return std::make_unique<ExportStmt>(es.symbols, st.span);
+      }
     }
     return nullptr;
   }
@@ -547,6 +975,56 @@ class Interpreter {
 ExecResult runProgram(const std::vector<StmtPtr>& program, std::istream& in, std::ostream& out) {
   Interpreter it(in, out);
   return it.exec(program);
+}
+
+ExecResult runProgramWithModules(const std::vector<StmtPtr>& program, std::istream& in, std::ostream& out,
+                                 std::shared_ptr<ModuleCache> moduleCache) {
+  Interpreter it(in, out, moduleCache);
+  return it.exec(program);
+}
+
+// ModuleCache implementation
+ModulePtr ModuleCache::get(const std::string& modulePath) const {
+  auto it = modules_.find(modulePath);
+  if (it != modules_.end()) return it->second;
+  return nullptr;
+}
+
+void ModuleCache::set(const std::string& modulePath, ModulePtr module) {
+  modules_[modulePath] = std::move(module);
+}
+
+bool ModuleCache::isLoading(const std::string& modulePath) const {
+  auto mod = get(modulePath);
+  return mod && mod->loading;
+}
+
+void ModuleCache::clear() {
+  modules_.clear();
+}
+
+// Module implementation
+bool Module::getExport(const std::string& name, Value& out) const {
+  auto it = exports.find(name);
+  if (it != exports.end()) {
+    out = it->second;
+    return true;
+  }
+  return false;
+}
+
+// ModuleNamespace implementation
+bool ModuleNamespace::get(const std::string& name, Value& out) const {
+  auto it = bindings.find(name);
+  if (it != bindings.end()) {
+    out = it->second;
+    return true;
+  }
+  // Fall back to module exports if module is loaded
+  if (module && module->loaded) {
+    return module->getExport(name, out);
+  }
+  return false;
 }
 
 } // namespace epp

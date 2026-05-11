@@ -1,0 +1,14 @@
+# Example: Using std.collections
+
+import std.collections as c
+
+# Create an array
+set numbers to [1, 2, 3, 4, 5]
+say numbers
+
+# Check if contains (E++ syntax: func arg1 and arg2)
+set has3 to c.contains numbers and 3
+say has3
+
+set has10 to c.contains numbers and 10
+say has10

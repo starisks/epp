@@ -1,0 +1,60 @@
+# std.collections - Collection utilities for E++
+
+function map arr and fn
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to fn arr at i
+    push result and val
+    set i to i + 1
+  end
+  return result
+end
+
+function filter arr and fn
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    if fn val then
+      push result and val
+    end
+    set i to i + 1
+  end
+  return result
+end
+
+function reduce arr and fn and init
+  set acc to init
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    set acc to fn acc and val
+    set i to i + 1
+  end
+  return acc
+end
+
+function find arr and fn
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    if fn val then
+      return val
+    end
+    set i to i + 1
+  end
+  return null
+end
+
+function contains arr and value
+  set i to 0
+  while i is less than len arr do
+    set val to arr at i
+    if val is equal to value then
+      return true
+    end
+    set i to i + 1
+  end
+  return false
+end

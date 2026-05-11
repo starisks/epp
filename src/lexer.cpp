@@ -46,6 +46,10 @@ LexResult lex(const Source& src) {
     {"than", TokenType::Than},
     {"true", TokenType::True},
     {"false", TokenType::False},
+    {"import", TokenType::Import},
+    {"export", TokenType::Export},
+    {"from", TokenType::From},
+    {"as", TokenType::As},
   };
 
   LexResult out;
@@ -111,6 +115,7 @@ LexResult lex(const Source& src) {
       case '-': advance(); add(TokenType::Minus, "-", sp); continue;
       case '*': advance(); add(TokenType::Star, "*", sp); continue;
       case '/': advance(); add(TokenType::Slash, "/", sp); continue;
+      case '.': advance(); add(TokenType::Dot, ".", sp); continue;
       case '"': {
         advance(); // opening quote
         std::string str;

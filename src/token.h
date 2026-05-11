@@ -54,6 +54,13 @@ enum class TokenType {
   Than,
   True,
   False,
+
+  // module system
+  Import,
+  Export,
+  From,
+  As,
+  Dot,        // .
 };
 
 inline const char* tokenTypeName(TokenType t) {
@@ -98,6 +105,11 @@ inline const char* tokenTypeName(TokenType t) {
     case TokenType::Than: return "than";
     case TokenType::True: return "true";
     case TokenType::False: return "false";
+    case TokenType::Import: return "import";
+    case TokenType::Export: return "export";
+    case TokenType::From: return "from";
+    case TokenType::As: return "as";
+    case TokenType::Dot: return "Dot";
   }
   return "Unknown";
 }

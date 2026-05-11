@@ -24,8 +24,10 @@ enum class ExprKind {
   Binary,
   Unary,
   Call,
+  MethodCall,  // obj.method args
   Index,
   Group,
+  Dot,         // namespace access: module.symbol
 };
 
 enum class StmtKind {
@@ -38,6 +40,8 @@ enum class StmtKind {
   Function,
   Return,
   ExprStmt,
+  Import,
+  Export,
 };
 
 struct Expr {
@@ -112,6 +116,15 @@ struct CallExpr final : Expr {
       : Expr(ExprKind::Call, sp), callee(std::move(c)), args(std::move(a)) {}
 };
 
+// Method call: obj.method arg1 and arg2
+struct MethodCallExpr final : Expr {
+  ExprPtr receiver;        // The object/module
+  std::string method;      // The method name
+  std::vector<ExprPtr> args;
+  MethodCallExpr(ExprPtr r, std::string m, std::vector<ExprPtr> a, Span sp)
+      : Expr(ExprKind::MethodCall, sp), receiver(std::move(r)), method(std::move(m)), args(std::move(a)) {}
+};
+
 struct IndexExpr final : Expr {
   ExprPtr target;
   ExprPtr index;
@@ -122,6 +135,14 @@ struct IndexExpr final : Expr {
 struct GroupExpr final : Expr {
   ExprPtr inner;
   GroupExpr(ExprPtr e, Span sp) : Expr(ExprKind::Group, sp), inner(std::move(e)) {}
+};
+
+// Namespace/module access: module.symbol
+struct DotExpr final : Expr {
+  ExprPtr left;    // The module/namespace
+  std::string right;  // The symbol name
+  DotExpr(ExprPtr l, std::string r, Span sp)
+      : Expr(ExprKind::Dot, sp), left(std::move(l)), right(std::move(r)) {}
 };
 
 struct Stmt {
@@ -196,6 +217,27 @@ struct ReturnStmt final : Stmt {
 struct ExprStmt final : Stmt {
   ExprPtr expr;
   ExprStmt(ExprPtr e, Span sp) : Stmt(StmtKind::ExprStmt, sp), expr(std::move(e)) {}
+};
+
+// Import statement: import module, import module as alias, from module import symbol
+struct ImportStmt final : Stmt {
+  std::vector<std::string> modulePath;  // e.g., ["std", "math"]
+  std::string alias;                    // alias name (empty if no alias)
+  std::vector<std::string> symbols;     // for 'from x import a, b' (empty for 'import x')
+  bool importAll = false;               // for 'from x import *'
+
+  ImportStmt(std::vector<std::string> path, std::string aliasName, Span sp)
+      : Stmt(StmtKind::Import, sp), modulePath(std::move(path)), alias(std::move(aliasName)) {}
+
+  ImportStmt(std::vector<std::string> path, std::vector<std::string> syms, bool all, Span sp)
+      : Stmt(StmtKind::Import, sp), modulePath(std::move(path)), symbols(std::move(syms)), importAll(all) {}
+};
+
+// Export statement: export { symbol1, symbol2 }
+struct ExportStmt final : Stmt {
+  std::vector<std::string> symbols;  // explicit exports (empty means export all public)
+  ExportStmt(std::vector<std::string> syms, Span sp)
+      : Stmt(StmtKind::Export, sp), symbols(std::move(syms)) {}
 };
 
 } // namespace epp

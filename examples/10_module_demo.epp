@@ -1,0 +1,40 @@
+# E++ Module System Demo
+# Shows all import styles and features
+
+# 1. Import with alias
+import std.math as m
+say "=== Math Module with Alias ==="
+set sum to m.add 10 and 20
+say sum
+
+set product to m.multiply 5 and 6
+say product
+
+set power_result to m.power 2 and 10
+say power_result
+
+# 2. From import - import specific symbols
+from std.math import abs, max, min
+say "=== From Import Functions ==="
+set absolute to abs -42
+say absolute
+
+set larger to max 100 and 50
+say larger
+
+set smaller to min 100 and 50
+say smaller
+
+# 3. Direct module usage
+import std.collections as c
+say "=== Collections Module ==="
+set nums to [1, 2, 3, 4, 5]
+say nums
+
+set found to c.contains nums and 3
+say found
+
+set not_found to c.contains nums and 10
+say not_found
+
+say "=== All demos completed! ==="

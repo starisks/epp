@@ -1,0 +1,48 @@
+# std.math - Math functions for E++
+
+function add a and b
+  return a + b
+end
+
+function subtract a and b
+  return a - b
+end
+
+function multiply a and b
+  return a * b
+end
+
+function divide a and b
+  return a / b
+end
+
+function power base and exp
+  set result to 1
+  set i to 0
+  while i is less than exp do
+    set result to result * base
+    set i to i + 1
+  end
+  return result
+end
+
+function abs x
+  if x is less than 0 then
+    return -x
+  end
+  return x
+end
+
+function max a and b
+  if a is greater than b then
+    return a
+  end
+  return b
+end
+
+function min a and b
+  if a is less than b then
+    return a
+  end
+  return b
+end

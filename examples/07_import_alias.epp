@@ -1,0 +1,13 @@
+# Example: Import with alias
+
+import std.math as m
+
+# Use the alias (E++ syntax)
+set result to m.add 10 and 20
+say result
+
+set result to m.subtract 50 and 15
+say result
+
+set result to m.max 5 and 12
+say result

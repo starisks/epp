@@ -1,0 +1,23 @@
+# std.io - Input/Output utilities for E++
+# Note: print and input are handled specially by the runtime
+
+export { print, println, input, format }
+
+function print value
+  say value
+end
+
+function println value
+  say value
+end
+
+function input prompt
+  ask prompt into response
+  return response
+end
+
+function format template and values
+  # Simple template formatting
+  # {0}, {1}, etc. get replaced with values
+  return template
+end

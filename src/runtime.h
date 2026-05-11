@@ -12,6 +12,11 @@
 
 namespace epp {
 
+// Forward declarations
+struct Module;
+struct ModuleNamespace;
+struct ModuleCache;
+
 struct RuntimeError {
   std::string message;
   Span span;
@@ -21,6 +26,7 @@ struct Value;
 struct Env;
 
 using EnvPtr = std::shared_ptr<Env>;
+using ModulePtr = std::shared_ptr<Module>;
 
 struct FunctionValue {
   std::vector<std::string> params;
@@ -32,8 +38,9 @@ struct FunctionValue {
 struct Value {
   using Array = std::vector<Value>;
   using Func = std::shared_ptr<FunctionValue>;
+  using ModuleNs = std::shared_ptr<ModuleNamespace>;
 
-  std::variant<std::monostate, double, std::string, bool, Array, Func> data;
+  std::variant<std::monostate, double, std::string, bool, Array, Func, ModuleNs> data;
 
   static Value null() { return Value{}; }
 
@@ -64,6 +71,12 @@ struct Value {
   static Value func(Func f) {
     Value x;
     x.data = std::move(f);
+    return x;
+  }
+
+  static Value moduleNs(ModuleNs ns) {
+    Value x;
+    x.data = std::move(ns);
     return x;
   }
 
@@ -104,7 +117,16 @@ struct Value {
     }
 
     // Functions compare by identity (same pointer).
-    return std::get<Func>(data) == std::get<Func>(other.data);
+    if (std::holds_alternative<Func>(data)) {
+      return std::get<Func>(data) == std::get<Func>(other.data);
+    }
+
+    // Module namespaces compare by identity (same pointer).
+    if (std::holds_alternative<ModuleNs>(data)) {
+      return std::get<ModuleNs>(data) == std::get<ModuleNs>(other.data);
+    }
+
+    return false;
   }
 };
 
@@ -125,11 +147,53 @@ struct ExecResult {
   std::vector<RuntimeError> errors;
 };
 
+// Main entry point - runs program with module support
 ExecResult runProgram(const std::vector<StmtPtr>& program, std::istream& in, std::ostream& out);
+
+// Advanced entry point with module cache for imports
+ExecResult runProgramWithModules(const std::vector<StmtPtr>& program, std::istream& in, std::ostream& out,
+                                 std::shared_ptr<ModuleCache> moduleCache = nullptr);
 
 std::string toString(const Value& v);
 bool isTruthy(const Value& v);
 void printError(const RuntimeError& err);
+
+// Module namespace structure for runtime
+struct ModuleNamespace {
+    ModulePtr module;
+    std::unordered_map<std::string, Value> bindings;
+
+    explicit ModuleNamespace(ModulePtr m) : module(std::move(m)) {}
+
+    bool get(const std::string& name, Value& out) const;
+};
+
+// Module structure for runtime
+struct Module {
+    std::string name;
+    std::string sourcePath;
+    std::vector<StmtPtr> ast;
+    std::unordered_map<std::string, Value> exports;
+    bool loaded = false;
+    bool loading = false;
+
+    explicit Module(std::string n, std::string p)
+        : name(std::move(n)), sourcePath(std::move(p)) {}
+
+    bool getExport(const std::string& name, Value& out) const;
+};
+
+// Module cache - prevents duplicate loading
+class ModuleCache {
+public:
+    ModulePtr get(const std::string& modulePath) const;
+    void set(const std::string& modulePath, ModulePtr module);
+    bool isLoading(const std::string& modulePath) const;
+    void clear();
+
+private:
+    std::unordered_map<std::string, ModulePtr> modules_;
+};
 
 } // namespace epp
 

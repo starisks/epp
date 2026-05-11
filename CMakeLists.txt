@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(epp LANGUAGES CXX)
+set(EPP_VERSION "dev" CACHE STRING "E++ version")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,3 +38,5 @@ if (MINGW)
   )
 
 endif()
+
+target_compile_definitions(epp PRIVATE EPP_VERSION=\"${EPP_VERSION}\")
