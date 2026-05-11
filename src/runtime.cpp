@@ -547,16 +547,25 @@ class Interpreter {
     // Check if module is already cached
     ModulePtr mod = moduleCache_ ? moduleCache_->get(moduleName) : nullptr;
 
-    if (!mod) {
+    if (mod) {
+      // Check for circular import
+      if (mod->loading) {
+        throwErr("Circular import detected: " + moduleName + " is already being loaded", is.span);
+      }
+      // Module is already loaded and cached - use it
+    } else {
       // Load and execute the module
       mod = loadAndExecuteModule(is.modulePath);
+      if (!mod) {
+        throwErr("Module not found: '" + moduleName + "'. Install with: epp install " + moduleName, is.span);
+      }
       if (moduleCache_ && mod) {
         moduleCache_->set(moduleName, mod);
       }
     }
 
-    if (!mod || !mod->loaded) {
-      throwErr("Failed to load module: " + moduleName, is.span);
+    if (!mod->loaded) {
+      throwErr("Module failed to load: " + moduleName, is.span);
     }
 
     // Handle different import styles
@@ -571,8 +580,13 @@ class Interpreter {
       }
     } else if (is.importAll) {
       // 'from module import *' - import all exports into current scope
-      for (const auto& [name, val] : mod->exports) {
-        env->setLocal(name, val);
+      if (mod->exports.empty()) {
+        // No exports to import - this is a warning but not an error
+        // Continue without importing anything
+      } else {
+        for (const auto& [name, val] : mod->exports) {
+          env->setLocal(name, val);
+        }
       }
     } else {
       // 'import module' or 'import module as alias'

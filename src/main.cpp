@@ -185,23 +185,55 @@ static int repl() {
 int main(int argc, char** argv) {
   using namespace epp;
 
-  // 1. Handle CLI flags FIRST
-  if (argc > 1) {
-    std::string arg = argv[1];
+  // 0. REPL mode (no arguments)
+  if (argc <= 1) {
+    return repl();
+  }
 
+  std::string arg = argv[1];
+
+  // 1. Handle CLI commands and flags FIRST (before file resolution)
+  // These are NOT files - they are commands or options
+  
   if (arg == "--version") {
     showVersion();
     return 0;
-  } 
+  }
 
-  if (arg == "install" && argc > 2) {
+  if (arg == "--help" || arg == "help") {
+    std::cout <<
+      "E++ CLI (epp)\n\n"
+      "Usage:\n"
+      "  epp                      Start REPL\n"
+      "  epp <file>.epp           Run a file\n"
+      "  epp install <package>    Install a package\n"
+      "  epp remove <package>     Remove a package\n"
+      "  epp list                 List installed packages\n\n"
+      "Options:\n"
+      "  --version                Show version and check for updates\n"
+      "  --help                   Show this help message\n";
+    return 0;
+  }
+
+  // Package commands
+  if (arg == "install") {
+    if (argc < 3) {
+      std::cerr << "Error: 'install' requires a package name.\n";
+      std::cerr << "Usage: epp install <package>\n";
+      return 1;
+    }
     std::string pkgName = argv[2];
     PackageManager::initializePackageDir();
     bool ok = PackageManager::installPackage(pkgName);
     return ok ? 0 : 1;
   }
 
-  if (arg == "remove" && argc > 2) {
+  if (arg == "remove") {
+    if (argc < 3) {
+      std::cerr << "Error: 'remove' requires a package name.\n";
+      std::cerr << "Usage: epp remove <package>\n";
+      return 1;
+    }
     std::string pkgName = argv[2];
     bool ok = PackageManager::removePackage(pkgName);
     return ok ? 0 : 1;
@@ -221,33 +253,29 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  if (arg == "--help" || arg == "help") {
-    std::cout <<
-      "E++ CLI (epp)\n\n"
-      "Usage:\n"
-      "  epp                      Start REPL\n"
-      "  epp <file>.epp           Run a file\n"
-      "  epp install <package>    Install a package\n"
-      "  epp remove <package>     Remove a package\n"
-      "  epp list                 List installed packages\n\n"
-      "Options:\n"
-      "  --version                Show version and check for updates\n"
-      "  --help                   Show this help message\n";
-    return 0;
-    } 
+  // 2. Check if argument looks like a CLI command (starts with -- or is a known command word)
+  // but wasn't handled above = unknown command
+  if (arg.size() > 2 && arg[0] == '-' && arg[1] == '-') {
+    std::cerr << "Error: Unknown option: " << arg << "\n";
+    std::cerr << "Use 'epp --help' for usage information.\n";
+    return 1;
   }
 
-  // 2. REPL mode
-  if (argc <= 1) {
-    return repl();
-  }
-
-  // 3. File execution
-  std::string path = argv[1];
+  // 3. File execution (only if not a command)
+  // Check if the file exists and is readable
+  std::string path = arg;
   std::string text = readFileText(path);
 
   if (text.empty()) {
-    std::cerr << "Could not read file: " << path << "\n";
+    // Distinguish between "file doesn't exist" and "file is empty"
+    std::ifstream check(path);
+    if (!check.good()) {
+      std::cerr << "Error: Could not read file: " << path << "\n";
+      std::cerr << "Use 'epp --help' for usage information.\n";
+    } else {
+      // File exists but is empty - this is valid
+      text = "";  // ensure empty string
+    }
     return 1;
   }
 
