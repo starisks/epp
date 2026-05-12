@@ -1,0 +1,55 @@
+# IO utilities for E++
+# Note: print and input are built-in, these are wrappers
+
+function println message
+  say message
+end
+
+function print message
+  # For now, same as println
+  say message
+end
+
+function read_line prompt
+  if prompt is not null then
+    say prompt
+  end
+  ask ""
+  return input
+end
+
+function read_number prompt
+  if prompt is not null then
+    say prompt
+  end
+  ask "Enter number:"
+  return input
+end
+
+function printf format and values
+  # Simple printf-style formatting
+  # Conceptual implementation
+  say format
+end
+
+function read_file path
+  # Read file content
+  # Conceptual implementation
+  return ""
+end
+
+function write_file path and content
+  # Write content to file
+  # Conceptual implementation
+end
+
+function append_file path and content
+  # Append content to file
+  # Conceptual implementation
+end
+
+function file_exists path
+  # Check if file exists
+  # Conceptual implementation
+  return false
+end

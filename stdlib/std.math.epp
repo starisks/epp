@@ -1,0 +1,113 @@
+function add a and b
+  return a + b
+end
+
+function subtract a and b
+  return a - b
+end
+
+function multiply a and b
+  return a * b
+end
+
+function divide a and b
+  return a / b
+end
+
+function power base and exp
+  set result to 1
+  set i to 0
+  while i is less than exp do
+    set result to result * base
+    set i to i + 1
+  end
+  return result
+end
+
+function abs x
+  if x is less than 0 then
+    return -x
+  end
+  return x
+end
+
+function max a and b
+  if a is greater than b then
+    return a
+  end
+  return b
+end
+
+function min a and b
+  if a is less than b then
+    return a
+  end
+  return b
+end
+
+function sqrt x
+  # Square root - conceptual implementation
+  return x
+end
+
+function sin x
+  # Sine function - conceptual
+  return 0.0
+end
+
+function cos x
+  # Cosine function - conceptual
+  return 1.0
+end
+
+function tan x
+  # Tangent function - conceptual
+  return 0.0
+end
+
+function factorial n
+  # Factorial - iterative implementation
+  if n is less than 0 then
+    return 0
+  end
+  set result to 1
+  set i to 1
+  while i is less than or equal to n do
+    set result to result * i
+    set i to i + 1
+  end
+  return result
+end
+
+function gcd a and b
+  # Greatest common divisor
+  while b is not equal to 0 do
+    set temp to b
+    set b to a % b
+    set a to temp
+  end
+  return a
+end
+
+function lcm a and b
+  # Least common multiple
+  return (a * b) / gcd a and b
+end
+
+function round x
+  # Round to nearest integer
+  # Conceptual
+  return x
+end
+
+function floor x
+  # Floor function
+  # Conceptual
+  return x
+end
+
+function ceil x
+  # Ceiling function
+  # Conceptual
+  return x
+end

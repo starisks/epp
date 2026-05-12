@@ -1,0 +1,23 @@
+# Time and date utilities for E++
+
+function now
+  # Return current timestamp (seconds since epoch)
+  # Conceptual implementation
+  return 0
+end
+
+function sleep seconds
+  # Sleep for specified seconds
+  # Conceptual implementation - would block execution
+end
+
+function format_time timestamp
+  # Format timestamp as string
+  # Conceptual implementation
+  return "1970-01-01 00:00:00"
+end
+
+function timestamp
+  # Alias for now
+  return now
+end

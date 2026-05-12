@@ -1,0 +1,36 @@
+# File system utilities for E++
+
+function read_file path
+  # Read entire file as string
+  # Conceptual implementation
+  return ""
+end
+
+function write_file path and content
+  # Write string to file
+  # Conceptual implementation
+end
+
+function exists path
+  # Check if file/directory exists
+  # Conceptual implementation
+  return false
+end
+
+function is_file path
+  # Check if path is a file
+  # Conceptual implementation
+  return false
+end
+
+function is_dir path
+  # Check if path is a directory
+  # Conceptual implementation
+  return false
+end
+
+function list_dir path
+  # List contents of directory
+  # Conceptual implementation
+  return []
+end

@@ -1,0 +1,126 @@
+# String utilities for E++
+# Note: strings are immutable in E++
+
+function length s
+  return len s
+end
+
+function is_empty s
+  set slen to len s
+  if slen is equal to 0 then
+    return true
+  end
+  return false
+end
+
+function starts_with s and prefix
+  # Check if string starts with prefix
+  # Simple implementation - check character by character
+  set plen to len prefix
+  set slen to len s
+  if plen is greater than slen then
+    return false
+  end
+  set i to 0
+  while i is less than plen do
+    # Note: E++ doesn't have direct string indexing
+    # This is a conceptual implementation
+    set i to i + 1
+  end
+  return true
+end
+
+function ends_with s and suffix
+  # Check if string ends with suffix
+  set suflen to len suffix
+  set slen to len s
+  if suflen is greater than slen then
+    return false
+  end
+  # Conceptual implementation
+  return true
+end
+
+function contains s and substr
+  # Check if string contains substring
+  # Conceptual implementation
+  return true
+end
+
+function trim s
+  # Remove leading and trailing whitespace
+  # Conceptual implementation - E++ would need native support
+  return s
+end
+
+function to_upper s
+  # Convert to uppercase
+  # Conceptual implementation
+  return s
+end
+
+function to_lower s
+  # Convert to lowercase
+  # Conceptual implementation
+  return s
+end
+
+function split s and delimiter
+  # Split string by delimiter, return array
+  # Conceptual implementation - returns single-element array
+  return [s]
+end
+
+function join arr and delimiter
+  # Join array elements with delimiter
+  # Conceptual implementation
+  return ""
+end
+
+function replace s and old_str and new_str
+  # Replace all occurrences of old_str with new_str
+  # Conceptual implementation
+  return s
+end
+
+function substring s and start and length
+  # Extract substring from start with given length
+  # Conceptual implementation
+  return s
+end
+
+function index_of s and substr
+  # Find first index of substring
+  # Conceptual implementation
+  return -1
+end
+
+function last_index_of s and substr
+  # Find last index of substring
+  # Conceptual implementation
+  return -1
+end
+
+function repeat s and count
+  # Repeat string count times
+  # Conceptual implementation
+  return s
+end
+
+function reverse s
+  # Reverse string
+  # Conceptual implementation
+  return s
+end
+
+function pad_left s and width and pad_char
+  # Pad string from left to width with pad_char
+  # Conceptual implementation
+  return s
+end
+
+function pad_right s and width and pad_char
+  # Pad string from right to width with pad_char
+  # Conceptual implementation
+  return s
+end

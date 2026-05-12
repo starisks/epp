@@ -1,0 +1,143 @@
+function contains arr and item
+  set i to 0
+  while i is less than len arr do
+    if arr @ i is equal to item then
+      return true
+    end
+    set i to i + 1
+  end
+  return false
+end
+
+function index_of arr and item
+  set i to 0
+  while i is less than len arr do
+    if arr @ i is equal to item then
+      return i
+    end
+    set i to i + 1
+  end
+  return -1
+end
+
+function push arr and item
+  # Returns new array with item appended
+  # Note: This creates a copy since E++ arrays are immutable
+  set new_arr to arr
+  # Note: In a real implementation, this would need native support
+  # For now, this is a placeholder
+  return new_arr
+end
+
+function length arr
+  return len arr
+end
+
+function is_empty arr
+  return len arr is equal to 0
+end
+
+function slice arr and start and end
+  # Return subarray from start to end
+  # Conceptual implementation
+  return arr
+end
+
+function reverse arr
+  # Reverse array
+  # Conceptual implementation
+  return arr
+end
+
+function sort arr
+  # Sort array (conceptual - bubble sort would work)
+  # Conceptual implementation
+  return arr
+end
+
+function map arr and fn
+  # Apply function to each element
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to fn arr @ i
+    # push result val - conceptual
+    set i to i + 1
+  end
+  return result
+end
+
+function filter arr and fn
+  # Filter elements that match predicate
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to arr @ i
+    if fn val then
+      # push result val
+    end
+    set i to i + 1
+  end
+  return result
+end
+
+function reduce arr and fn and initial
+  # Reduce array to single value
+  set acc to initial
+  set i to 0
+  while i is less than len arr do
+    set val to arr @ i
+    set acc to fn acc and val
+    set i to i + 1
+  end
+  return acc
+end
+
+function find arr and fn
+  # Find first element matching predicate
+  set i to 0
+  while i is less than len arr do
+    set val to arr @ i
+    if fn val then
+      return val
+    end
+    set i to i + 1
+  end
+  return null
+end
+
+function every arr and fn
+  # Check if all elements match predicate
+  set i to 0
+  while i is less than len arr do
+    if not fn arr @ i then
+      return false
+    end
+    set i to i + 1
+  end
+  return true
+end
+
+function some arr and fn
+  # Check if any element matches predicate
+  set i to 0
+  while i is less than len arr do
+    if fn arr @ i then
+      return true
+    end
+    set i to i + 1
+  end
+  return false
+end
+
+function unique arr
+  # Remove duplicates
+  # Conceptual implementation
+  return arr
+end
+
+function concat arr1 and arr2
+  # Concatenate two arrays
+  # Conceptual implementation
+  return arr1
+end

@@ -1,0 +1,29 @@
+# Debug and logging utilities for E++
+
+function log message
+  # Log message to console/debug output
+  say "[LOG] " + message
+end
+
+function warn message
+  # Log warning message
+  say "[WARN] " + message
+end
+
+function error message
+  # Log error message
+  say "[ERROR] " + message
+end
+
+function debug value
+  # Debug print value with type info
+  # Conceptual implementation
+  say "[DEBUG] " + value
+end
+
+function assert condition and message
+  # Assert condition, log error if false
+  if not condition then
+    error message
+  end
+end

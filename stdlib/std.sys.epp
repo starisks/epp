@@ -1,0 +1,24 @@
+# System utilities for E++
+
+function args
+  # Return command-line arguments as array
+  # Conceptual implementation
+  return []
+end
+
+function env name
+  # Get environment variable
+  # Conceptual implementation
+  return ""
+end
+
+function platform
+  # Return current platform (windows, linux, macos)
+  # Conceptual implementation
+  return "unknown"
+end
+
+function version
+  # Return E++ version
+  return "0.4.0"
+end

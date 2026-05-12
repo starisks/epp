@@ -1,0 +1,34 @@
+# Type conversion utilities for E++
+
+function to_string value
+  # Convert value to string
+  # Conceptual implementation - most values are already strings in E++
+  return value
+end
+
+function to_number value
+  # Convert string to number
+  # Conceptual implementation
+  return 0
+end
+
+function to_bool value
+  # Convert value to boolean
+  # Conceptual implementation
+  if value then
+    return true
+  end
+  return false
+end
+
+function to_array value
+  # Convert value to array if possible
+  # Conceptual implementation
+  return [value]
+end
+
+function type_of value
+  # Return type of value as string
+  # Conceptual implementation
+  return "unknown"
+end

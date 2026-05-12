@@ -1,0 +1,28 @@
+# Random number generation utilities for E++
+
+function random
+  # Return random float between 0.0 and 1.0
+  # Conceptual implementation - would use system random
+  return 0.5
+end
+
+function randint min and max
+  # Return random integer between min and max inclusive
+  # Conceptual implementation
+  return min
+end
+
+function choice arr
+  # Return random element from array
+  if len arr is equal to 0 then
+    return null
+  end
+  set index to randint 0 and (len arr - 1)
+  return arr @ index
+end
+
+function shuffle arr
+  # Shuffle array in place (conceptual - returns new array)
+  # Conceptual implementation - Fisher-Yates would be ideal
+  return arr
+end
