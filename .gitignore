@@ -7,3 +7,12 @@ CMakeCache.txt
 cmake_install.cmake
 Makefile
 build/
+rag_index/
+*.png
+generated_data.csv
+generated_data.xlsx
+*.py
+*.js
+*.txt
+patch.diff
+*.json

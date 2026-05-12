@@ -1,0 +1,27 @@
+# Test new stdlib modules
+
+import std.random as rand
+import std.debug as debug
+import std.convert as conv
+
+# Test random
+set ri to rand.randint 1 and 10
+say "Random int: " + ri
+
+set arr to [1, 2, 3, 4, 5]
+set choice to rand.choice arr
+say "Random choice: " + choice
+
+# Test debug
+debug.log "This is a log message"
+debug.warn "This is a warning"
+debug.error "This is an error"
+
+# Test convert
+set s to conv.to_string 42
+say "Converted to string: " + s
+
+set t to conv.type_of "hello"
+say "Type of 'hello': " + t
+
+say "New modules test complete!"

@@ -318,6 +318,73 @@ function min a and b
   end
   return b
 end
+
+function sqrt x
+  # Square root - conceptual implementation
+  return x
+end
+
+function sin x
+  # Sine function - conceptual
+  return 0.0
+end
+
+function cos x
+  # Cosine function - conceptual
+  return 1.0
+end
+
+function tan x
+  # Tangent function - conceptual
+  return 0.0
+end
+
+function factorial n
+  # Factorial - iterative implementation
+  if n is less than 0 then
+    return 0
+  end
+  set result to 1
+  set i to 1
+  while i is less than or equal to n do
+    set result to result * i
+    set i to i + 1
+  end
+  return result
+end
+
+function gcd a and b
+  # Greatest common divisor
+  while b is not equal to 0 do
+    set temp to b
+    set b to a % b
+    set a to temp
+  end
+  return a
+end
+
+function lcm a and b
+  # Least common multiple
+  return (a * b) / gcd a and b
+end
+
+function round x
+  # Round to nearest integer
+  # Conceptual
+  return x
+end
+
+function floor x
+  # Floor function
+  # Conceptual
+  return x
+end
+
+function ceil x
+  # Ceiling function
+  # Conceptual
+  return x
+end
 )";
   }
   
@@ -349,6 +416,34 @@ function read_number prompt
   end
   ask "Enter number:"
   return input
+end
+
+function printf format and values
+  # Simple printf-style formatting
+  # Conceptual implementation
+  say format
+end
+
+function read_file path
+  # Read file content
+  # Conceptual implementation
+  return ""
+end
+
+function write_file path and content
+  # Write content to file
+  # Conceptual implementation
+end
+
+function append_file path and content
+  # Append content to file
+  # Conceptual implementation
+end
+
+function file_exists path
+  # Check if file exists
+  # Conceptual implementation
+  return false
 end
 )";
   }
@@ -392,6 +487,111 @@ end
 
 function is_empty arr
   return len arr is equal to 0
+end
+
+function slice arr and start and end
+  # Return subarray from start to end
+  # Conceptual implementation
+  return arr
+end
+
+function reverse arr
+  # Reverse array
+  # Conceptual implementation
+  return arr
+end
+
+function sort arr
+  # Sort array (conceptual - bubble sort would work)
+  # Conceptual implementation
+  return arr
+end
+
+function map arr and fn
+  # Apply function to each element
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to fn arr @ i
+    # push result val - conceptual
+    set i to i + 1
+  end
+  return result
+end
+
+function filter arr and fn
+  # Filter elements that match predicate
+  set result to []
+  set i to 0
+  while i is less than len arr do
+    set val to arr @ i
+    if fn val then
+      # push result val
+    end
+    set i to i + 1
+  end
+  return result
+end
+
+function reduce arr and fn and initial
+  # Reduce array to single value
+  set acc to initial
+  set i to 0
+  while i is less than len arr do
+    set val to arr @ i
+    set acc to fn acc and val
+    set i to i + 1
+  end
+  return acc
+end
+
+function find arr and fn
+  # Find first element matching predicate
+  set i to 0
+  while i is less than len arr do
+    set val to arr @ i
+    if fn val then
+      return val
+    end
+    set i to i + 1
+  end
+  return null
+end
+
+function every arr and fn
+  # Check if all elements match predicate
+  set i to 0
+  while i is less than len arr do
+    if not fn arr @ i then
+      return false
+    end
+    set i to i + 1
+  end
+  return true
+end
+
+function some arr and fn
+  # Check if any element matches predicate
+  set i to 0
+  while i is less than len arr do
+    if fn arr @ i then
+      return true
+    end
+    set i to i + 1
+  end
+  return false
+end
+
+function unique arr
+  # Remove duplicates
+  # Conceptual implementation
+  return arr
+end
+
+function concat arr1 and arr2
+  # Concatenate two arrays
+  # Conceptual implementation
+  return arr1
 end
 )";
   }
@@ -476,6 +676,54 @@ function join arr and delimiter
   # Conceptual implementation
   return ""
 end
+
+function replace s and old_str and new_str
+  # Replace all occurrences of old_str with new_str
+  # Conceptual implementation
+  return s
+end
+
+function substring s and start and length
+  # Extract substring from start with given length
+  # Conceptual implementation
+  return s
+end
+
+function index_of s and substr
+  # Find first index of substring
+  # Conceptual implementation
+  return -1
+end
+
+function last_index_of s and substr
+  # Find last index of substring
+  # Conceptual implementation
+  return -1
+end
+
+function repeat s and count
+  # Repeat string count times
+  # Conceptual implementation
+  return s
+end
+
+function reverse s
+  # Reverse string
+  # Conceptual implementation
+  return s
+end
+
+function pad_left s and width and pad_char
+  # Pad string from left to width with pad_char
+  # Conceptual implementation
+  return s
+end
+
+function pad_right s and width and pad_char
+  # Pad string from right to width with pad_char
+  # Conceptual implementation
+  return s
+end
 )";
   }
   
@@ -504,6 +752,181 @@ end
 function version
   # Return E++ version
   return "0.4.0"
+end
+)";
+  }
+  
+  if (packageName == "std.random") {
+    return R"(
+# Random number generation utilities for E++
+
+function random
+  # Return random float between 0.0 and 1.0
+  # Conceptual implementation - would use system random
+  return 0.5
+end
+
+function randint min and max
+  # Return random integer between min and max inclusive
+  # Conceptual implementation
+  return min
+end
+
+function choice arr
+  # Return random element from array
+  if len arr is equal to 0 then
+    return null
+  end
+  set index to randint 0 and (len arr - 1)
+  return arr @ index
+end
+
+function shuffle arr
+  # Shuffle array in place (conceptual - returns new array)
+  # Conceptual implementation - Fisher-Yates would be ideal
+  return arr
+end
+)";
+  }
+  
+  if (packageName == "std.time") {
+    return R"(
+# Time and date utilities for E++
+
+function now
+  # Return current timestamp (seconds since epoch)
+  # Conceptual implementation
+  return 0
+end
+
+function sleep seconds
+  # Sleep for specified seconds
+  # Conceptual implementation - would block execution
+end
+
+function format_time timestamp
+  # Format timestamp as string
+  # Conceptual implementation
+  return "1970-01-01 00:00:00"
+end
+
+function timestamp
+  # Alias for now
+  return now
+end
+)";
+  }
+  
+  if (packageName == "std.fs") {
+    return R"(
+# File system utilities for E++
+
+function read_file path
+  # Read entire file as string
+  # Conceptual implementation
+  return ""
+end
+
+function write_file path and content
+  # Write string to file
+  # Conceptual implementation
+end
+
+function exists path
+  # Check if file/directory exists
+  # Conceptual implementation
+  return false
+end
+
+function is_file path
+  # Check if path is a file
+  # Conceptual implementation
+  return false
+end
+
+function is_dir path
+  # Check if path is a directory
+  # Conceptual implementation
+  return false
+end
+
+function list_dir path
+  # List contents of directory
+  # Conceptual implementation
+  return []
+end
+)";
+  }
+  
+  if (packageName == "std.debug") {
+    return R"(
+# Debug and logging utilities for E++
+
+function log message
+  # Log message to console/debug output
+  say "[LOG] " + message
+end
+
+function warn message
+  # Log warning message
+  say "[WARN] " + message
+end
+
+function error message
+  # Log error message
+  say "[ERROR] " + message
+end
+
+function debug value
+  # Debug print value with type info
+  # Conceptual implementation
+  say "[DEBUG] " + value
+end
+
+function assert condition and message
+  # Assert condition, log error if false
+  if not condition then
+    error message
+  end
+end
+)";
+  }
+  
+  if (packageName == "std.convert") {
+    return R"(
+# Type conversion utilities for E++
+
+function to_string value
+  # Convert value to string
+  # Conceptual implementation - most values are already strings in E++
+  return value
+end
+
+function to_number value
+  # Convert string to number
+  # Conceptual implementation
+  return 0
+end
+
+function to_bool value
+  # Convert value to boolean
+  # Conceptual implementation
+  if value then
+    return true
+  end
+  return false
+end
+
+function to_array value
+  # Convert value to array if possible
+  # Conceptual implementation
+  return [value]
+end
+
+function type_of value
+  # Return type of value as string
+  # Conceptual implementation
+  return "unknown"
 end
 )";
   }
